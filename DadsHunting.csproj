@@ -5,7 +5,7 @@
     <Nullable>enable</Nullable>
     <AssemblyName>DadsHunting</AssemblyName>
     <RootNamespace>DadsHunting</RootNamespace>
-    <Version>1.0.2</Version>
+    <Version>1.0.3</Version>
     <ValheimManagedPath Condition="'$(ValheimManagedPath)' == ''">C:\Program Files (x86)\Steam\steamapps\common\Valheim\valheim_Data\Managed</ValheimManagedPath>
     <PublicizedPath Condition="'$(PublicizedPath)' == ''">C:\Users\DudeB\ValheimModArchives\Default-Profile-Archive-20260911-115308-009\BuildRefs\Valheim-1.0.12-publicized-resolved</PublicizedPath>
     <BepInExCorePath Condition="'$(BepInExCorePath)' == ''">C:\Users\DudeB\AppData\Roaming\Thunderstore Mod Manager\DataFolder\Valheim\profiles\Default\BepInEx\core</BepInExCorePath>

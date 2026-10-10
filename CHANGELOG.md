@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.3
+
+- Reset a completed quarry when the player leaves its marked circle, allowing the radar to mark it again while it remains within detection range.
+
 ## 1.0.2
 
 - Replaced the custom popup with a native Skills dialog clone, including its frame, scrolling area, heading style, and close button.

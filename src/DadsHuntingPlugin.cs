@@ -13,7 +13,7 @@ public sealed class DadsHuntingPlugin : BaseUnityPlugin
 {
     public const string Guid = "com.dadisbored.dadshunting";
     public const string Name = "DadsHunting";
-    public const string Version = "1.0.2";
+    public const string Version = "1.0.3";
     private const string SelectionKey = "DadsHunting.SelectedQuarry";
     private Harmony? _harmony;
     private ConfigEntry<float> _detectionRange = null!;
@@ -22,7 +22,8 @@ public sealed class DadsHuntingPlugin : BaseUnityPlugin
     private Player? _player;
     private string _selection = "";
     private Component? _target;
-    private readonly HashSet<Component> _completed = new();
+    private readonly Dictionary<Component, Vector3> _completed = new();
+    private readonly List<Component> _releaseCompleted = new();
     private Minimap.PinData? _pin;
     private Minimap? _pinMap;
     private Vector3 _circleCenter;
@@ -84,8 +85,14 @@ public sealed class DadsHuntingPlugin : BaseUnityPlugin
         Vector3 origin = player.transform.position;
         float range2 = _detectionRange.Value * _detectionRange.Value;
         var characters = Character.GetAllCharacters();
-        _completed.RemoveWhere(component => component == null ||
-            DistanceXZ(origin, component.transform.position) > range2);
+        float circleRadius2 = _circleDiameter.Value * _circleDiameter.Value * 0.25f;
+        _releaseCompleted.Clear();
+        foreach (KeyValuePair<Component, Vector3> completed in _completed)
+        {
+            if (completed.Key == null || DistanceXZ(origin, completed.Value) > circleRadius2)
+                _releaseCompleted.Add(completed.Key!);
+        }
+        foreach (Component component in _releaseCompleted) _completed.Remove(component);
 
         if (_target != null && (!Alive(_target) ||
             DistanceXZ(origin, _target.transform.position) > range2 ||
@@ -96,7 +103,7 @@ public sealed class DadsHuntingPlugin : BaseUnityPlugin
             float nearest = range2;
             foreach (Character character in characters)
             {
-                if (character == null || _completed.Contains(character) || character.GetHealth() <= 0f ||
+                if (character == null || _completed.ContainsKey(character) || character.GetHealth() <= 0f ||
                     Utils.GetPrefabName(character.gameObject) != _selection) continue;
                 float distance = DistanceXZ(origin, character.transform.position);
                 if (distance > nearest) continue;
@@ -105,7 +112,7 @@ public sealed class DadsHuntingPlugin : BaseUnityPlugin
             }
             foreach (IMonoUpdater updater in RandomFlyingBird.Instances)
             {
-                if (updater is not RandomFlyingBird bird || bird == null || _completed.Contains(bird) ||
+                if (updater is not RandomFlyingBird bird || bird == null || _completed.ContainsKey(bird) ||
                     Utils.GetPrefabName(bird.gameObject) != _selection) continue;
                 float distance = DistanceXZ(origin, bird.transform.position);
                 if (distance > nearest) continue;
@@ -128,12 +135,12 @@ public sealed class DadsHuntingPlugin : BaseUnityPlugin
         }
         _pin.m_pos = _circleCenter;
         _pin.m_worldSize = _circleDiameter.Value;
-        if (DistanceXZ(origin, _circleCenter) <= _circleDiameter.Value * _circleDiameter.Value * 0.25f)
+        if (DistanceXZ(origin, _circleCenter) <= circleRadius2)
         {
             if (_enteredAt < 0f) _enteredAt = Time.time;
             if (Time.time - _enteredAt >= 30f)
             {
-                _completed.Add(_target);
+                _completed[_target] = _circleCenter;
                 ClearTarget();
             }
         }
