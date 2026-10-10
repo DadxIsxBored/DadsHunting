@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.2
+
+- Replaced the custom popup with a native Skills dialog clone, including its frame, scrolling area, heading style, and close button.
+- Replaced the outlined target with a filled gold hunting arrow sized for the inventory header.
+- Expanded the header to give the added emblem room and used native dialog dimensions for the quarry list.
+
 ## 1.0.1
 
 - Removed the square behind the inventory target emblem and aligned it with the native header icons.

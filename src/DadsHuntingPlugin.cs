@@ -13,7 +13,7 @@ public sealed class DadsHuntingPlugin : BaseUnityPlugin
 {
     public const string Guid = "com.dadisbored.dadshunting";
     public const string Name = "DadsHunting";
-    public const string Version = "1.0.1";
+    public const string Version = "1.0.2";
     private const string SelectionKey = "DadsHunting.SelectedQuarry";
     private Harmony? _harmony;
     private ConfigEntry<float> _detectionRange = null!;
@@ -173,6 +173,19 @@ public sealed class DadsHuntingPlugin : BaseUnityPlugin
 internal static class HuntingInventoryPatch
 {
     private static void Postfix(InventoryGui __instance) => __instance.gameObject.AddComponent<HuntingMenu>();
+}
+
+[HarmonyPatch(typeof(InventoryGui), "Update")]
+internal static class HuntingInventoryClosePatch
+{
+    private static bool Prefix(InventoryGui __instance)
+    {
+        HuntingMenu? menu = __instance.GetComponent<HuntingMenu>();
+        if (menu == null || !menu.IsOpen) return true;
+        if (!ZInput.GetButtonDown("JoyButtonB") && !ZInput.GetKeyDown(KeyCode.Escape)) return true;
+        menu.Close();
+        return false;
+    }
 }
 
 [HarmonyPatch(typeof(Destructible), "Destroy", new[] { typeof(HitData) })]
