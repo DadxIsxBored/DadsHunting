@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.4
+
+- Find selected quarry through Valheim's nearby spawned object records and track it by ZDO ID.
+- Verify the spawned record has a live game object, move the native map circle with its current position, and remove it 30 seconds after entry even if the quarry moves.
+
 ## 1.0.3
 
 - Reset a completed quarry when the player leaves its marked circle, allowing the radar to mark it again while it remains within detection range.

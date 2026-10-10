@@ -13,7 +13,7 @@ public sealed class DadsHuntingPlugin : BaseUnityPlugin
 {
     public const string Guid = "com.dadisbored.dadshunting";
     public const string Name = "DadsHunting";
-    public const string Version = "1.0.3";
+    public const string Version = "1.0.4";
     private const string SelectionKey = "DadsHunting.SelectedQuarry";
     private Harmony? _harmony;
     private ConfigEntry<float> _detectionRange = null!;
@@ -21,9 +21,13 @@ public sealed class DadsHuntingPlugin : BaseUnityPlugin
     private float _nextScan;
     private Player? _player;
     private string _selection = "";
-    private Component? _target;
-    private readonly Dictionary<Component, Vector3> _completed = new();
-    private readonly List<Component> _releaseCompleted = new();
+    private ZDOID _targetId = ZDOID.None;
+    private readonly Dictionary<ZDOID, Vector3> _completed = new();
+    private readonly List<ZDOID> _releaseCompleted = new();
+    private readonly List<ZDO> _nearObjects = new();
+    private readonly List<ZDO> _farObjects = new();
+    private static readonly System.Reflection.FieldInfo? PinUpdateRequired =
+        AccessTools.Field(typeof(Minimap), "m_pinUpdateRequired");
     private Minimap.PinData? _pin;
     private Minimap? _pinMap;
     private Vector3 _circleCenter;
@@ -84,49 +88,58 @@ public sealed class DadsHuntingPlugin : BaseUnityPlugin
         }
         Vector3 origin = player.transform.position;
         float range2 = _detectionRange.Value * _detectionRange.Value;
-        var characters = Character.GetAllCharacters();
         float circleRadius2 = _circleDiameter.Value * _circleDiameter.Value * 0.25f;
-        _releaseCompleted.Clear();
-        foreach (KeyValuePair<Component, Vector3> completed in _completed)
+        ZDOMan? zdoMan = ZDOMan.instance;
+        ZNetScene? scene = ZNetScene.instance;
+        if (zdoMan == null || scene == null || ZoneSystem.instance == null)
         {
-            if (completed.Key == null || DistanceXZ(origin, completed.Value) > circleRadius2)
-                _releaseCompleted.Add(completed.Key!);
+            ClearTarget();
+            return;
         }
-        foreach (Component component in _releaseCompleted) _completed.Remove(component);
 
-        if (_target != null && (!Alive(_target) ||
-            DistanceXZ(origin, _target.transform.position) > range2 ||
-            Utils.GetPrefabName(_target.gameObject) != _selection)) ClearTarget();
+        _nearObjects.Clear();
+        _farObjects.Clear();
+        zdoMan.FindSectorObjects(ZoneSystem.GetZone(origin), SimulationDistance.OriginalDistance,
+            _nearObjects, _farObjects);
+        int prefabHash = _selection.GetStableHashCode();
+        _releaseCompleted.Clear();
+        foreach (KeyValuePair<ZDOID, Vector3> completed in _completed)
+        {
+            ZDO? previous = zdoMan.GetZDO(completed.Key);
+            if (previous == null || !TryGetLivePosition(previous, scene, prefabHash, out Vector3 position) ||
+                DistanceXZ(origin, position) > circleRadius2)
+                _releaseCompleted.Add(completed.Key);
+        }
+        foreach (ZDOID id in _releaseCompleted) _completed.Remove(id);
 
-        if (_target == null)
+        ZDO? target = _targetId == ZDOID.None ? null : zdoMan.GetZDO(_targetId);
+        Vector3 targetPosition = default;
+        if (target != null && (!TryGetLivePosition(target, scene, prefabHash, out targetPosition) ||
+            DistanceXZ(origin, targetPosition) > range2)) target = null;
+        if (target == null) ClearTarget();
+
+        if (target == null)
         {
             float nearest = range2;
-            foreach (Character character in characters)
+            foreach (ZDO candidate in _nearObjects)
             {
-                if (character == null || _completed.ContainsKey(character) || character.GetHealth() <= 0f ||
-                    Utils.GetPrefabName(character.gameObject) != _selection) continue;
-                float distance = DistanceXZ(origin, character.transform.position);
+                if (_completed.ContainsKey(candidate.m_uid) ||
+                    !TryGetLivePosition(candidate, scene, prefabHash, out Vector3 position)) continue;
+                float distance = DistanceXZ(origin, position);
                 if (distance > nearest) continue;
                 nearest = distance;
-                _target = character;
+                target = candidate;
+                targetPosition = position;
             }
-            foreach (IMonoUpdater updater in RandomFlyingBird.Instances)
+            if (target != null)
             {
-                if (updater is not RandomFlyingBird bird || bird == null || _completed.ContainsKey(bird) ||
-                    Utils.GetPrefabName(bird.gameObject) != _selection) continue;
-                float distance = DistanceXZ(origin, bird.transform.position);
-                if (distance > nearest) continue;
-                nearest = distance;
-                _target = bird;
-            }
-            if (_target != null)
-            {
-                _circleCenter = _target.transform.position;
+                _targetId = target.m_uid;
                 _enteredAt = -1f;
             }
         }
 
-        if (_target == null) return;
+        if (target == null) return;
+        _circleCenter = targetPosition;
         if (_pin == null || _pinMap != map)
         {
             ClearPin();
@@ -135,14 +148,15 @@ public sealed class DadsHuntingPlugin : BaseUnityPlugin
         }
         _pin.m_pos = _circleCenter;
         _pin.m_worldSize = _circleDiameter.Value;
+        PinUpdateRequired?.SetValue(map, true);
         if (DistanceXZ(origin, _circleCenter) <= circleRadius2)
         {
             if (_enteredAt < 0f) _enteredAt = Time.time;
-            if (Time.time - _enteredAt >= 30f)
-            {
-                _completed[_target] = _circleCenter;
-                ClearTarget();
-            }
+        }
+        if (_enteredAt >= 0f && Time.time - _enteredAt >= 30f)
+        {
+            _completed[_targetId] = _circleCenter;
+            ClearTarget();
         }
     }
 
@@ -152,12 +166,22 @@ public sealed class DadsHuntingPlugin : BaseUnityPlugin
         return x * x + z * z;
     }
 
-    private static bool Alive(Component component) => component is not Character character || character.GetHealth() > 0f;
+    private static bool TryGetLivePosition(ZDO zdo, ZNetScene scene, int prefabHash, out Vector3 position)
+    {
+        position = default;
+        if (!zdo.IsValid() || zdo.GetPrefab() != prefabHash || zdo.GetBool(ZDOVars.s_dead)) return false;
+        ZNetView? view = scene.FindInstance(zdo);
+        if (view == null || !view.IsValid()) return false;
+        Character? character = view.GetComponent<Character>();
+        if (character != null && character.GetHealth() <= 0f) return false;
+        position = view.transform.position;
+        return true;
+    }
 
     private void ClearTarget()
     {
         ClearPin();
-        _target = null;
+        _targetId = ZDOID.None;
         _enteredAt = -1f;
     }
 

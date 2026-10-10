@@ -1,6 +1,6 @@
 {
   "name": "DadsHunting",
-  "version_number": "1.0.3",
+  "version_number": "1.0.4",
   "website_url": "https://github.com/DadxIsxBored/DadsHunting",
   "description": "Select previously killed quarry and locate nearby animals with a temporary hunting circle on Valheim's map.",
   "dependencies": [
