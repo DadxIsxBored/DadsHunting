@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.1
+
+- Removed the square behind the inventory target emblem and aligned it with the native header icons.
+- Moved the quarry menu to the inventory overlay so it draws above the crafting area.
+
 ## 1.0.0
 
 - Added a target emblem and biome-grouped quarry menu to the inventory header.

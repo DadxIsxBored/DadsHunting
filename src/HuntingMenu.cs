@@ -13,6 +13,9 @@ internal sealed class HuntingMenu : MonoBehaviour
     private Button _button = null!;
     private GameObject _panel = null!;
     private RectTransform _content = null!;
+    private RectTransform _panelRect = null!;
+    private RectTransform _emblemRect = null!;
+    private RectTransform _overlayRoot = null!;
     private Sprite? _targetSprite;
     private Texture2D? _targetTexture;
 
@@ -21,45 +24,44 @@ internal sealed class HuntingMenu : MonoBehaviour
         _gui = GetComponent<InventoryGui>();
         if (_gui == null || _gui.m_pvp == null || _gui.m_recipeName == null) return;
         RectTransform? host = _gui.m_pvp.transform.parent as RectTransform;
-        if (host == null) return;
+        RectTransform? overlayRoot = _gui.m_inventoryRoot as RectTransform;
+        if (host == null || overlayRoot == null) return;
+        _overlayRoot = overlayRoot;
         BuildButton(host);
-        BuildPanel(host);
+        BuildPanel(_overlayRoot);
     }
 
     private void BuildButton(RectTransform host)
     {
         RectTransform rect = Rect("DadsHunting_Emblem", host);
+        _emblemRect = rect;
         RectTransform pvp = (RectTransform)_gui.m_pvp.transform;
         rect.anchorMin = pvp.anchorMin;
         rect.anchorMax = pvp.anchorMax;
         rect.pivot = pvp.pivot;
-        rect.anchoredPosition = pvp.anchoredPosition + new Vector2(pvp.rect.width + 8f, 0f);
+        rect.anchoredPosition = pvp.anchoredPosition + new Vector2(pvp.rect.width - 10f, 0f);
         rect.sizeDelta = pvp.sizeDelta;
         rect.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
-        Image background = rect.gameObject.AddComponent<Image>();
-        background.color = new Color(0.07f, 0.11f, 0.12f, 0.96f);
         _button = rect.gameObject.AddComponent<Button>();
-        _button.targetGraphic = background;
         _button.onClick.AddListener(Toggle);
         _targetTexture = TargetTexture();
         _targetSprite = Sprite.Create(_targetTexture, new Rect(0f, 0f, 64f, 64f), new Vector2(0.5f, 0.5f));
         RectTransform icon = Rect("Target", rect);
-        Stretch(icon, 8f);
+        Stretch(icon, 14f);
         Image image = icon.gameObject.AddComponent<Image>();
         image.sprite = _targetSprite;
         image.color = Gold;
-        image.raycastTarget = false;
+        image.raycastTarget = true;
+        _button.targetGraphic = image;
     }
 
     private void BuildPanel(RectTransform host)
     {
         RectTransform panel = Rect("DadsHunting_QuarryMenu", host);
+        _panelRect = panel;
         _panel = panel.gameObject;
-        RectTransform emblem = (RectTransform)_button.transform;
-        panel.anchorMin = emblem.anchorMin;
-        panel.anchorMax = emblem.anchorMax;
+        panel.anchorMin = panel.anchorMax = new Vector2(0.5f, 0.5f);
         panel.pivot = new Vector2(1f, 1f);
-        panel.anchoredPosition = emblem.anchoredPosition + new Vector2(emblem.rect.width * 0.5f, -emblem.rect.height * 0.5f - 16f);
         panel.sizeDelta = new Vector2(340f, 460f);
         Image background = panel.gameObject.AddComponent<Image>();
         background.color = PanelColor;
@@ -108,8 +110,18 @@ internal sealed class HuntingMenu : MonoBehaviour
         if (open)
         {
             _panel.transform.SetAsLastSibling();
+            PositionPanel();
             Refresh();
         }
+    }
+
+    private void PositionPanel()
+    {
+        if (_panelRect == null || _emblemRect == null || _overlayRoot == null) return;
+        Vector3[] corners = new Vector3[4];
+        _emblemRect.GetWorldCorners(corners);
+        Vector3 at = _overlayRoot.InverseTransformPoint(corners[3]);
+        _panelRect.localPosition = new Vector3(at.x, at.y - 45f, 0f);
     }
 
     private void Refresh()
@@ -246,6 +258,7 @@ internal sealed class HuntingMenu : MonoBehaviour
     {
         if (_panel == null || !_panel.activeSelf) return;
         if (!InventoryGui.IsVisible() || Input.GetKeyDown(KeyCode.Escape)) _panel.SetActive(false);
+        else PositionPanel();
     }
 
     private void OnDestroy()
