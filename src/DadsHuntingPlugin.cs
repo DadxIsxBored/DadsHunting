@@ -13,7 +13,7 @@ public sealed class DadsHuntingPlugin : BaseUnityPlugin
 {
     public const string Guid = "com.dadisbored.dadshunting";
     public const string Name = "DadsHunting";
-    public const string Version = "1.0.4";
+    public const string Version = "1.0.5";
     private const string SelectionKey = "DadsHunting.SelectedQuarry";
     private Harmony? _harmony;
     private ConfigEntry<float> _detectionRange = null!;

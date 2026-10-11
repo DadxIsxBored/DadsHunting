@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.5
+
+- Added a selection box using Valheim's red checked-map-pin mark to each quarry row.
+- Added in-game trophy item icons beside animals and the in-game feather icon beside birds.
+
 ## 1.0.4
 
 - Find selected quarry through Valheim's nearby spawned object records and track it by ZDO ID.

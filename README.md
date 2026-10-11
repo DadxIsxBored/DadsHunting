@@ -1,6 +1,6 @@
 # DadsHunting
 
-DadsHunting adds a target emblem beside the PvP swords in Valheim's inventory header. Select one previously killed quarry from the **Select your Quarry** menu. The list is grouped by biome and contains the 19 prefab names specified for this mod.
+DadsHunting adds a target emblem beside the PvP swords in Valheim's inventory header. Select one previously killed quarry from the **Select your Quarry** menu. The list is grouped by biome and contains the 19 prefab names specified for this mod. Each row shows the in-game trophy icon, or a feather for birds, and the selected row uses Valheim's red checked-map-pin mark.
 
 Valheim's saved character kill statistics unlock ordinary creatures, including kills made before installing DadsHunting. Birds and other qualifying objects without a `Character` kill statistic unlock after a qualifying kill made while DadsHunting is installed; earlier kills of those objects cannot be recovered from the game's saved statistics. The selection is saved in the character's existing custom data.
 

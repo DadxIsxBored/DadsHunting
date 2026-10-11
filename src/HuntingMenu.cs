@@ -232,11 +232,103 @@ internal sealed class HuntingMenu : MonoBehaviour
             DadsHuntingPlugin.Instance?.Select(quarry);
             Refresh();
         });
+        AddCheckBox(row, selected);
+        if (quarry != null) AddQuarryIcon(row, quarry);
         TMP_Text text = NewNativeText(row, label);
         text.fontSize = 22f;
         text.color = selected ? Color.black : Color.white;
         text.raycastTarget = false;
+        text.rectTransform.offsetMin = new Vector2(quarry == null ? 55f : 101f, 0f);
     }
+
+    private void AddCheckBox(RectTransform row, bool selected)
+    {
+        RectTransform box = NewRect("SelectionBox", row);
+        box.anchorMin = new Vector2(0f, 0.5f);
+        box.anchorMax = new Vector2(0f, 0.5f);
+        box.pivot = new Vector2(0.5f, 0.5f);
+        box.anchoredPosition = new Vector2(27f, 0f);
+        box.sizeDelta = new Vector2(30f, 30f);
+        Image frame = box.gameObject.AddComponent<Image>();
+        frame.sprite = _nativeRowBackground?.sprite;
+        frame.type = _nativeRowBackground?.type ?? Image.Type.Simple;
+        frame.color = new Color(0.10f, 0.10f, 0.10f, 0.75f);
+        frame.raycastTarget = false;
+
+        Transform? nativeCheck = Minimap.instance?.m_pinPrefab?.transform.Find("Checked");
+        if (nativeCheck == null) return;
+        GameObject mark = Instantiate(nativeCheck.gameObject, box, false);
+        mark.name = "MapCheckedMark";
+        RectTransform? markRect = mark.transform as RectTransform;
+        if (markRect != null)
+        {
+            markRect.anchorMin = new Vector2(0.5f, 0.5f);
+            markRect.anchorMax = new Vector2(0.5f, 0.5f);
+            markRect.pivot = new Vector2(0.5f, 0.5f);
+            markRect.anchoredPosition = Vector2.zero;
+            markRect.sizeDelta = new Vector2(28f, 28f);
+        }
+        foreach (Graphic graphic in mark.GetComponentsInChildren<Graphic>(true)) graphic.raycastTarget = false;
+        mark.SetActive(selected);
+    }
+
+    private static void AddQuarryIcon(RectTransform row, Quarry quarry)
+    {
+        Sprite? sprite = QuarryIcon(quarry);
+        if (sprite == null) return;
+        RectTransform iconRect = NewRect("QuarryIcon", row);
+        iconRect.anchorMin = new Vector2(0f, 0.5f);
+        iconRect.anchorMax = new Vector2(0f, 0.5f);
+        iconRect.pivot = new Vector2(0.5f, 0.5f);
+        iconRect.anchoredPosition = new Vector2(71f, 0f);
+        iconRect.sizeDelta = new Vector2(36f, 36f);
+        Image icon = iconRect.gameObject.AddComponent<Image>();
+        icon.sprite = sprite;
+        icon.preserveAspect = true;
+        icon.raycastTarget = false;
+    }
+
+    private static Sprite? QuarryIcon(Quarry quarry)
+    {
+        ObjectDB? items = ObjectDB.instance;
+        if (items == null) return null;
+        if (quarry.Prefab is "Crow" or "Seagal" or "AshCrow" or "Volture")
+            return ItemIcon(items.GetItemPrefab("Feathers"));
+
+        GameObject? creature = ZNetScene.instance?.GetPrefab(quarry.Prefab);
+        CharacterDrop? drops = creature?.GetComponent<CharacterDrop>();
+        if (drops != null)
+        {
+            foreach (CharacterDrop.Drop drop in drops.m_drops)
+            {
+                ItemDrop? item = drop.m_prefab?.GetComponent<ItemDrop>();
+                if (item?.m_itemData?.m_shared?.m_itemType == ItemDrop.ItemData.ItemType.Trophy)
+                {
+                    Sprite? icon = item.m_itemData.GetIcon();
+                    if (icon != null) return icon;
+                }
+            }
+        }
+
+        string trophyName = quarry.Prefab switch
+        {
+            "Moose_calf" => "TrophyMoose",
+            "Seal_Pup" => "TrophySeal",
+            _ => "Trophy" + quarry.Prefab
+        };
+        Sprite? trophy = ItemIcon(items.GetItemPrefab(trophyName));
+        if (trophy != null) return trophy;
+
+        if (drops != null)
+            foreach (CharacterDrop.Drop drop in drops.m_drops)
+            {
+                Sprite? icon = ItemIcon(drop.m_prefab);
+                if (icon != null) return icon;
+            }
+        return null;
+    }
+
+    private static Sprite? ItemIcon(GameObject? prefab) => prefab?.GetComponent<ItemDrop>()?.m_itemData.GetIcon();
 
     private RectTransform NewRow(string name, float top, float height)
     {
